@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:terminal_launcher/terminal.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); 
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const TerminalApp());
 }
 
@@ -22,3 +22,4 @@ class TerminalApp extends StatelessWidget {
     );
   }
 }
+

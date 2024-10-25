@@ -7,28 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:io';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const TerminalApp());
-}
-
-class TerminalApp extends StatelessWidget {
-  const TerminalApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Terminal Launcher',
-      theme: ThemeData(
-        scaffoldBackgroundColor: Colors.black,
-        brightness: Brightness.dark,
-      ),
-      home: const Terminal(),
-    );
-  }
-}
-
 class Terminal extends StatefulWidget {
   const Terminal({super.key});
 
@@ -70,9 +48,9 @@ class _TerminalState extends State<Terminal> {
   }
 
   void _startUptimeTimer() {
-    _uptimeTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+    _uptimeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
-        _uptime += Duration(seconds: 1);
+        _uptime += const Duration(seconds: 1);
       });
     });
   }
@@ -84,7 +62,7 @@ class _TerminalState extends State<Terminal> {
       String deviceModel = androidInfo.model;
       _addOutputWidget(Text('Device Model: $deviceModel'));
     } catch (e) {
-      _addOutputWidget(Text("Error fetching device info: $e"));
+      _addErrorOutput("Error fetching device info: $e");
     }
   }
 
@@ -93,7 +71,7 @@ class _TerminalState extends State<Terminal> {
       int batteryLevel = await battery.batteryLevel;
       _addOutputWidget(Text('Battery Percentage: $batteryLevel%'));
     } catch (e) {
-      _addOutputWidget(Text("Error fetching battery info: $e"));
+      _addErrorOutput("Error fetching battery info: $e");
     }
   }
 
@@ -112,51 +90,79 @@ class _TerminalState extends State<Terminal> {
   void _executeCommand(String command) async {
     _addCommandOutput(command);
     List<String> parts = command.split(' ');
-
-    if (parts.isNotEmpty) {
-      String mainCommand = parts[0].toLowerCase();
-
-      if (mainCommand == 'list') {
-        _showInstalledAppsList();
-      } else if (mainCommand == 'run' && parts.length >= 2) {
-        String appName = parts.sublist(1).join(' ');
-        _runApp(appName);
-      } else if (mainCommand == 'deviceinfo') {
-        await getDeviceInfo();
-      } else if (mainCommand == 'battery') {
-        await getBatteryPercentage();
-      } else if (mainCommand == 'help') {
-        _showHelp();
-      } else if (mainCommand == 'time') {
-        _showCurrentTime();
-      } else if (mainCommand == 'uptime') {
-        _showUptime();
-      } else if (mainCommand == 'sysinfo') {
-        _showSysInfo();
-      } else if (mainCommand == 'ping' && parts.length == 2) {
-        String address = parts[1];
-        await _pingAddress(address);
-      } else if (mainCommand == 'traceroute' && parts.length == 2) {
-        String address = parts[1];
-        await _tracerouteAddress(address);
-      } else if (mainCommand == 'nslookup' && parts.length == 2) {
-        String address = parts[1];
-        await _nslookupAddress(address);
-      } else if (mainCommand == 'restart') {
-        _restartTerminal();
-      } else if (mainCommand == 'set' && parts.length >= 2 && parts[1] == 'username') {
-        if (parts.length == 3) {
-          String newUsername = parts[2];
-          await _saveUsername(newUsername);
-          _addOutputWidget(Text("Username set to: $newUsername"));
-        } else {
-          _addOutputWidget(Text("Usage: set username <new_username>"));
-        }
-      } else {
-        _addOutputWidget(Text("Command not recognized: $command"));
-      }
-    } else {
+    if (parts.isEmpty) {
       _addOutputWidget(Text("No command entered."));
+      return;
+    }
+
+    String mainCommand = parts[0].toLowerCase();
+
+    switch (mainCommand) {
+      case 'list':
+        _showInstalledAppsList();
+        break;
+      case 'run':
+        if (parts.length >= 2) {
+          _runApp(parts.sublist(1).join(' '));
+        } else {
+          _addOutputWidget(Text("Usage: run <app name>"));
+        }
+        break;
+      case 'deviceinfo':
+        await getDeviceInfo();
+        break;
+      case 'battery':
+        await getBatteryPercentage();
+        break;
+      case 'help':
+        _showHelp();
+        break;
+      case 'time':
+        _showCurrentTime();
+        break;
+      case 'uptime':
+        _showUptime();
+        break;
+      case 'sysinfo':
+        _showSysInfo();
+        break;
+      case 'ping':
+        if (parts.length == 2) {
+          await _pingAddress(parts[1]);
+        } else {
+          _addOutputWidget(Text("Usage: ping <address>"));
+        }
+        break;
+      case 'traceroute':
+        if (parts.length == 2) {
+          await _tracerouteAddress(parts[1]);
+        } else {
+          _addOutputWidget(Text("Usage: traceroute <address>"));
+        }
+        break;
+      case 'nslookup':
+        if (parts.length == 2) {
+          await _nslookupAddress(parts[1]);
+        } else {
+          _addOutputWidget(Text("Usage: nslookup <address>"));
+        }
+        break;
+      case 'restart':
+        _restartTerminal();
+        break;
+      case 'set':
+        if (parts.length >= 2 && parts[1] == 'username') {
+          if (parts.length == 3) {
+            String newUsername = parts[2];
+            await _saveUsername(newUsername);
+            _addOutputWidget(Text("Username set to: $newUsername"));
+          } else {
+            _addOutputWidget(Text("Usage: set username <new_username>"));
+          }
+        }
+        break;
+      default:
+        _addOutputWidget(Text("Command not recognized: $command"));
     }
   }
 
@@ -181,7 +187,7 @@ class _TerminalState extends State<Terminal> {
       ProcessResult result = await Process.run('ping', ['-c', '4', address]);
       _addOutputWidget(Text(result.stdout));
     } catch (e) {
-      _addOutputWidget(Text("Failed to ping $address: $e"));
+      _addErrorOutput("Failed to ping $address: $e");
     }
   }
 
@@ -190,7 +196,7 @@ class _TerminalState extends State<Terminal> {
       ProcessResult result = await Process.run('traceroute', [address]);
       _addOutputWidget(Text(result.stdout));
     } catch (e) {
-      _addOutputWidget(Text("Failed to traceroute to $address: $e"));
+      _addErrorOutput("Failed to traceroute to $address: $e");
     }
   }
 
@@ -199,7 +205,7 @@ class _TerminalState extends State<Terminal> {
       ProcessResult result = await Process.run('nslookup', [address]);
       _addOutputWidget(Text(result.stdout));
     } catch (e) {
-      _addOutputWidget(Text("Failed to nslookup $address: $e"));
+      _addErrorOutput("Failed to nslookup $address: $e");
     }
   }
 
@@ -250,83 +256,84 @@ class _TerminalState extends State<Terminal> {
     _addOutputWidget(Text('  - set username <new_username>: Set the username'));
   }
 
-  void _addCommandOutput(String command) {
-    _addOutputWidget(Text('$username@launcher\$ $command', style: TextStyle(color: Colors.green)));
-  }
-
   void _addOutputWidget(Widget widget) {
     setState(() {
       _output.add(widget);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-      });
+      _scrollToBottom();
     });
+  }
+
+  void _addCommandOutput(String command) {
+    _addOutputWidget(Text("$username@launcher\$ $command"));
+  }
+
+  void _addErrorOutput(String message) {
+    _addOutputWidget(Text(message, style: TextStyle(color: Colors.red)));
+  }
+
+  void _scrollToBottom() {
+    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                itemCount: _output.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    child: _output[index],
+                  );
+                },
+              ),
+            ),
+            Divider(color: Colors.white),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _commandController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Enter command...',
+                        hintStyle: TextStyle(color: Colors.grey),
+                      ),
+                      onSubmitted: (command) {
+                        _executeCommand(command);
+                        _commandController.clear();
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: () {
+                      _executeCommand(_commandController.text);
+                      _commandController.clear();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
     _commandController.dispose();
     _uptimeTimer?.cancel();
-    _scrollController.dispose();
     super.dispose();
   }
+}
 
- @override
-Widget build(BuildContext context) {
-  return GestureDetector(
-    onTap: () {
-      FocusScope.of(context).unfocus(); 
-    },
-    child: Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ..._output,
-                ],
-              ),
-            ),
-          ),
-          Center( 
-            child: Container(
-              width: 365, 
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey, width: 1.4),
-                borderRadius: BorderRadius.circular(5),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _commandController,
-                        style: const TextStyle(color: Colors.white),
-                        cursorColor: Colors.green,
-                        onSubmitted: (command) {
-                          _executeCommand(command);
-                          _commandController.clear();
-                        },
-                        decoration: const InputDecoration(
-                          hintText: 'Enter Command..',
-                          hintStyle: TextStyle(color: Colors.grey),
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-}
