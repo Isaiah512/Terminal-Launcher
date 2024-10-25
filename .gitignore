@@ -1,0 +1,40 @@
+# Dart & Flutter specific
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# Generated build files
+build/
+
+# IntelliJ/VSCode IDE settings
+.idea/
+.vscode/
+
+# macOS specific
+.DS_Store
+
+# Windows specific
+Thumbs.db
+
+# Android specific
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/.gradle/
+android/local.properties
+
+# iOS specific
+ios/Pods/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Runner.xcodeproj/project.xcworkspace/
+ios/Runner.xcworkspace/
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Google Service files (if applicable)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
