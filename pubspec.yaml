@@ -1,10 +1,11 @@
 name: terminal_launcher
-description: A new Flutter project.
+description: A minimalist command-line interface launcher for Android mobile
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
   sdk: '>=3.1.2 <4.0.0'
+
 dependencies:
   flutter:
     sdk: flutter
@@ -15,10 +16,19 @@ dependencies:
   collection: ^1.16.0
   connectivity_plus: ^3.0.3
   shared_preferences: ^2.0.15
+  flutter_native_splash: ^2.4.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+
 flutter:
   uses-material-design: true
+  assets:
+    - assets/splash_screen.png  
+
+flutter_native_splash:
+  color: "#000000"
+  image: assets/splash_screen.png
+  android_12:
