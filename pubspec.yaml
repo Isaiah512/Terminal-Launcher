@@ -13,6 +13,8 @@ dependencies:
   device_info_plus: ^9.0.3
   battery_plus: ^4.0.2
   collection: ^1.16.0
+  connectivity_plus: ^3.0.3
+  shared_preferences: ^2.0.15
 
 dev_dependencies:
   flutter_test:
