@@ -18,6 +18,7 @@ dependencies:
   shared_preferences: ^2.0.15
   flutter_native_splash: ^2.4.2
   url_launcher: ^6.0.20
+  permission_handler: ^10.2.0
 
 dev_dependencies:
   flutter_test:
