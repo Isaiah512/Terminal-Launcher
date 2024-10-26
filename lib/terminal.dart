@@ -165,7 +165,7 @@ class _TerminalState extends State<Terminal> {
           _addOutputWidget(const Text("Usage: echo <message>"));
         }
       } else if (mainCommand == 'clear') {
-        _restartTerminal();
+        _clearTerminal();
       } else if (mainCommand == 'restart') {
         _restartTerminal();
       } else if (mainCommand == 'set' && parts.length >= 2 && parts[1] == 'username') {
@@ -255,10 +255,17 @@ class _TerminalState extends State<Terminal> {
     }
   }
 
-  void _restartTerminal() {
+  void _clearTerminal() {
     setState(() {
       _output.clear();
     });
+  }
+
+  void _restartTerminal() {
+    setState(() {
+      _output.clear(); 
+    });
+    _loadStartupCommand();
   }
 
   void _showInstalledAppsList() {
