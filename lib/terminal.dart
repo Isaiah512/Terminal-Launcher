@@ -5,6 +5,11 @@ import 'package:battery_plus/battery_plus.dart';
 import 'package:collection/collection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'gemini_api.dart';
+import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 
@@ -144,6 +149,10 @@ class _TerminalState extends State<Terminal> {
         _showUptime();
       } else if (mainCommand == 'sysinfo') {
         _showSysInfo();
+      }else  if (mainCommand == 'ip') {
+        await _getLocalIpAddress();
+      } else if (mainCommand == 'connection') {
+        await _getConnectionStatus();
       } else if (mainCommand == 'ping' && parts.length == 2) {
         String address = parts[1];
         await _pingAddress(address);
@@ -157,6 +166,13 @@ class _TerminalState extends State<Terminal> {
         String query = parts.sublist(1).join(' ');
         await _searchInBrowser(query);
         return;
+      } else if (mainCommand == 'weather' && parts.length >= 2) {
+        String location = parts.sublist(1).join(' ');
+        await _getWeather(location);
+      }else if (mainCommand == 'generate' && parts.length >= 2) {
+        String prompt = parts.sublist(1).join(' ');
+        String generatedContent = await GeminiApi.generateContent(prompt);
+        _addOutputWidget(Text('Generated Content: $generatedContent'));
       } else if (mainCommand == 'echo') {
         if (parts.length > 1) {
           String message = parts.sublist(1).join(' ');
@@ -187,7 +203,28 @@ class _TerminalState extends State<Terminal> {
   void _echo(String message) {
     _addOutputWidget(Text(message));
   }
+  
+  Future<void> _getWeather(String location) async {
+    final apiKey = dotenv.env['OPENWEATHER_API_KEY']; 
+    final url = 'https://api.openweathermap.org/data/2.5/weather?q=$location&appid=$apiKey&units=metric';
 
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final weatherDescription = data['weather'][0]['description'];
+        final temperature = data['main']['temp'];
+        final city = data['name'];
+
+        _addOutputWidget(Text('Weather in $city: $weatherDescription, $temperature°C'));
+      } else {
+        _addOutputWidget(Text('Could not fetch weather data for $location.'));
+      }
+    } catch (e) {
+      _addOutputWidget(Text('Error fetching weather: $e'));
+    }
+  }
 
   void _showCurrentTime() {
     DateTime now = DateTime.now();
@@ -236,6 +273,36 @@ class _TerminalState extends State<Terminal> {
       _addOutputWidget(Text("Failed to ping $address: $e"));
     }
   }
+  
+  Future<void> _getConnectionStatus() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    String status;
+    if (connectivityResult == ConnectivityResult.mobile) {
+      status = "Connected to Mobile Network";
+    } else if (connectivityResult == ConnectivityResult.wifi) {
+      status = "Connected to Wi-Fi";
+    } else {
+      status = "No Internet Connection";
+    }
+    _addOutputWidget(Text(status));
+  }
+
+
+  Future<void> _getLocalIpAddress() async {
+    try {
+      for (var interface in await NetworkInterface.list()) {
+        for (var addr in interface.addresses) {
+          if (addr.type == InternetAddressType.IPv4) {
+            _addOutputWidget(Text('Local IP Address: ${addr.address}'));
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      _addOutputWidget(Text("Error fetching IP address: $e"));
+    }
+  }
+
 
   Future<void> _tracerouteAddress(String address) async {
     try {
@@ -293,23 +360,27 @@ class _TerminalState extends State<Terminal> {
 
   void _showHelp() {
     _addOutputWidget(const Text('Available commands:'));
-    _addOutputWidget(const Text('  - help: Show this help message'));
-    _addOutputWidget(const Text('  - echo <message>'));
-    _addOutputWidget(const Text('  - list: List installed apps'));
-    _addOutputWidget(const Text('  - run <app name>: Run a specific app'));
-    _addOutputWidget(const Text('  - websearch <query>: Search in browser'));
-    _addOutputWidget(const Text('  - deviceinfo: Show device information'));
-    _addOutputWidget(const Text('  - battery: Show battery percentage'));
-    _addOutputWidget(const Text('  - time: Show current time'));
-    _addOutputWidget(const Text('  - uptime: Show app uptime'));
-    _addOutputWidget(const Text('  - sysinfo: Show system information'));
-    _addOutputWidget(const Text('  - ping <address>: Ping a specified address'));
-    _addOutputWidget(const Text('  - traceroute <address>: Traceroute to a specified address'));
-    _addOutputWidget(const Text('  - nslookup <address>: DNS lookup for a specified address'));
-    _addOutputWidget(const Text('  - set username <new_username>: Set the username'));
-    _addOutputWidget(const Text('  - setstartup <command>: Set a command to run on startup'));
-    _addOutputWidget(const Text('  - restart: Restart the terminal'));
-    _addOutputWidget(const Text('  - clear: Clear the terminal'));
+    _addOutputWidget(const Text('help: Show this help message'));
+    _addOutputWidget(const Text('echo <message>'));
+    _addOutputWidget(const Text('list: List installed apps'));
+    _addOutputWidget(const Text('run <app name>: Run a specific app'));
+    _addOutputWidget(const Text('websearch <query>: Search in browser'));
+    _addOutputWidget(const Text('generate <prompt>: Generate content'));
+    _addOutputWidget(const Text('weather <city>: Show the weather for a specific city'));
+    _addOutputWidget(const Text('deviceinfo: Show device information'));
+    _addOutputWidget(const Text('battery: Show battery percentage'));
+    _addOutputWidget(const Text('time: Show current time'));
+    _addOutputWidget(const Text('uptime: Show app uptime'));
+    _addOutputWidget(const Text('sysinfo: Show system information'));
+    _addOutputWidget(const Text('ip: Show local IP address'));
+    _addOutputWidget(const Text('connection: Show network connection status'));
+    _addOutputWidget(const Text('ping <address>: Ping a specified address'));
+    _addOutputWidget(const Text('traceroute <address>: Traceroute to a specified address'));
+    _addOutputWidget(const Text('nslookup <address>: DNS lookup for a specified address'));
+    _addOutputWidget(const Text('set username <new_username>: Set the username'));
+    _addOutputWidget(const Text('setstartup <command>: Set a command to run on startup'));
+    _addOutputWidget(const Text('restart: Restart the terminal'));
+    _addOutputWidget(const Text('clear: Clear the terminal'));
   }
 
   void _addCommandOutput(String command) {

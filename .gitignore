@@ -4,6 +4,7 @@
 .flutter-plugins
 .flutter-plugins-dependencies
 pubspec.lock
+.env
 
 # Generated build files
 build/
