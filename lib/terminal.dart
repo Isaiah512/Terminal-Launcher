@@ -8,6 +8,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:torch_light/torch_light.dart';
+import 'package:volume_controller/volume_controller.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 import 'gemini_api.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -55,6 +58,7 @@ class _TerminalState extends State<Terminal> {
   @override
   void initState() {
     super.initState();
+    VolumeController().showSystemUI = false;
     _loadUsername();
     _loadInstalledApps();
     _loadStartupCommand(); 
@@ -112,6 +116,8 @@ class _TerminalState extends State<Terminal> {
       includeSystemApps: true,
     );
 
+    apps.sort((a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
+
     setState(() {
       _installedApps = apps;
     });
@@ -141,10 +147,59 @@ class _TerminalState extends State<Terminal> {
         }
       } else if (mainCommand == 'battery') {
         await getBatteryPercentage();
+      } else if (mainCommand == 'flashlight') {
+        if (parts.length > 1) {
+          String action = parts[1].toLowerCase();
+          if (action == 'on') {
+            await _toggleFlashlight(true);
+          } else if (action == 'off') {
+            await _toggleFlashlight(false);
+          } else {
+            _addOutputWidget(const Text("Usage: flashlight [on/off]"));
+          }
+        } else {
+          _addOutputWidget(const Text("Usage: flashlight [on/off]"));
+        }
       } else if (mainCommand == 'help') {
         _showHelp();
+      } else if (mainCommand == 'volume') {
+        if (parts.length > 1) {
+          String action = parts[1].toLowerCase();
+          if (action == 'up') {
+            _adjustVolume(0.1); 
+          } else if (action == 'down') {
+            _adjustVolume(-0.1); 
+          } else {
+            try {
+              double volume = double.parse(action) / 100;
+              _setVolume(volume); 
+            } catch (e) {
+              _addOutputWidget(const Text("Usage: volume [up/down/<0-100>]"));
+            }
+          }
+        } else {
+          _addOutputWidget(const Text("Usage: volume [up/down/<0-100>]"));
+        }
       } else if (mainCommand == 'time') {
         _showCurrentTime();
+      } else if (mainCommand == 'brightness') {
+        if (parts.length > 1) {
+          String action = parts[1].toLowerCase();
+          if (action == 'up') {
+            _adjustBrightness(0.1); 
+          } else if (action == 'down') {
+            _adjustBrightness(-0.1); 
+          } else {
+            try {
+              double brightness = double.parse(action) / 100;
+              _setBrightness(brightness); 
+            } catch (e) {
+              _addOutputWidget(const Text("Usage: brightness [up/down/<0-100>]"));
+            }
+          }
+        } else {
+          _addOutputWidget(const Text("Usage: brightness [up/down/<0-100>]"));
+        }
       } else if (mainCommand == 'uptime') {
         _showUptime();
       } else if (mainCommand == 'sysinfo') {
@@ -242,6 +297,55 @@ class _TerminalState extends State<Terminal> {
     _addOutputWidget(Text(sysInfo));
   }
   
+  void _adjustVolume(double change) async {
+    double currentVolume = await VolumeController().getVolume();
+    double newVolume = (currentVolume + change).clamp(0.0, 1.0);
+    VolumeController().setVolume(newVolume);
+    _addOutputWidget(Text("Volume: ${(newVolume * 100).toInt()}%"));
+  }
+
+  void _setVolume(double volume) async {
+    double newVolume = volume.clamp(0.0, 1.0);
+    VolumeController().setVolume(newVolume);
+    _addOutputWidget(Text("Volume set to: ${(newVolume * 100).toInt()}%"));
+  }
+
+
+  Future<void> _toggleFlashlight(bool turnOn) async {
+    try {
+      if (turnOn) {
+        await TorchLight.enableTorch();
+        _addOutputWidget(const Text("Flashlight turned on"));
+      } else {
+        await TorchLight.disableTorch();
+        _addOutputWidget(const Text("Flashlight turned off"));
+      }
+    } catch (e) {
+      _addOutputWidget(Text("Flashlight control error: $e"));
+    }
+  }
+
+  void _adjustBrightness(double change) async {
+    try {
+      double currentBrightness = await ScreenBrightness().current;
+      double newBrightness = (currentBrightness + change).clamp(0.0, 1.0);
+      await ScreenBrightness().setScreenBrightness(newBrightness);
+      _addOutputWidget(Text("Brightness: ${(newBrightness * 100).toInt()}%"));
+    } catch (e) {
+      _addOutputWidget(Text("Error adjusting brightness: $e"));
+    }
+  }
+
+  void _setBrightness(double brightness) async {
+    try {
+      double newBrightness = brightness.clamp(0.0, 1.0);
+      await ScreenBrightness().setScreenBrightness(newBrightness);
+      _addOutputWidget(Text("Brightness set to: ${(newBrightness * 100).toInt()}%"));
+    } catch (e) {
+      _addOutputWidget(Text("Error setting brightness: $e"));
+    }
+  }
+
   Future<void> _saveStartupCommand(String command) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('startup_command', command);
@@ -254,8 +358,7 @@ class _TerminalState extends State<Terminal> {
       _executeCommand(command); 
     }
   }
-
-  
+ 
   Future<void> _searchInBrowser(String query) async {
     final url = 'https://www.google.com/search?q=$query';
     if (await canLaunch(url)) {
@@ -287,7 +390,6 @@ class _TerminalState extends State<Terminal> {
     _addOutputWidget(Text(status));
   }
 
-
   Future<void> _getLocalIpAddress() async {
     try {
       for (var interface in await NetworkInterface.list()) {
@@ -302,7 +404,6 @@ class _TerminalState extends State<Terminal> {
       _addOutputWidget(Text("Error fetching IP address: $e"));
     }
   }
-
 
   Future<void> _tracerouteAddress(String address) async {
     try {
@@ -369,6 +470,11 @@ class _TerminalState extends State<Terminal> {
     _addOutputWidget(const Text('weather <city>: Show the weather for a specific city'));
     _addOutputWidget(const Text('deviceinfo: Show device information'));
     _addOutputWidget(const Text('battery: Show battery percentage'));
+    _addOutputWidget(const Text('volume up/down: Increase or decrease volume by 10%'));
+    _addOutputWidget(const Text('volume <0-100>: Set volume to a specific level'));
+    _addOutputWidget(const Text('brightness up/down: Increase or decrease brightness by 10%'));
+    _addOutputWidget(const Text('brightness <0-100>: Set brightness to a specific level'));
+    _addOutputWidget(const Text('flashlight on/off: Toggle the flashlight'));
     _addOutputWidget(const Text('time: Show current time'));
     _addOutputWidget(const Text('uptime: Show app uptime'));
     _addOutputWidget(const Text('sysinfo: Show system information'));
@@ -414,56 +520,61 @@ class _TerminalState extends State<Terminal> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus(); 
+    return WillPopScope(
+      onWillPop: () async {
+        return false;
       },
-      child: Scaffold(
-        body: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(8.0),
-                itemCount: _output.length,
-                itemBuilder: (context, index) {
-                  return _output[index]; 
-                },
-              ),
-            ),
-            Center( 
-              child: Container(
-                width: 385, 
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey, width: 1.4),
-                  borderRadius: BorderRadius.circular(5),
+      child: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+        },
+        child: Scaffold(
+          body: Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(8.0),
+                  itemCount: _output.length,
+                  itemBuilder: (context, index) {
+                    return _output[index];
+                  },
                 ),
-                child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _commandController,
-                          style: const TextStyle(color: Colors.white),
-                          cursorColor: Colors.green,
-                          onSubmitted: (command) {
-                            _executeCommand(command);
-                            _commandController.clear();
-                          },
-                          decoration: const InputDecoration(
-                            hintText: 'Enter Command..',
-                            hintStyle: TextStyle(color: Colors.grey),
-                            border: InputBorder.none,
+              ),
+              Center(
+                child: Container(
+                  width: 385,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey, width: 1.4),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _commandController,
+                            style: const TextStyle(color: Colors.white),
+                            cursorColor: Colors.green,
+                            onSubmitted: (command) {
+                              _executeCommand(command);
+                              _commandController.clear();
+                            },
+                            decoration: const InputDecoration(
+                              hintText: 'Enter Command..',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              border: InputBorder.none,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

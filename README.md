@@ -2,6 +2,8 @@
 
 A Flutter-based terminal launcher application for Android that provides command-line functionality to manage installed apps and access device information.
 
+![screenshot](./assets/screenshot.png)
+
 ## Commands
 
 Here are the available commands you can use in the terminal:
@@ -15,6 +17,11 @@ Here are the available commands you can use in the terminal:
 - `weather <city>`: Show the weather for a specific city
 - `deviceinfo`: Show device information
 - `battery`: Show battery percentage
+- `volume up/down`: Increase or decrease volume by 10%
+- `volume <0-100>`: Set volume to a specific level
+- `brightness up/down`: Increase or decrease brightness by 10%
+- `brightness <0-100>`: Set brightness to a specific level
+- `flashlight on/off:` Toggle the flashlight
 - `time`: Show current time
 - `uptime`: Show app uptime
 - `sysinfo`: Show system information

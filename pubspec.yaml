@@ -22,6 +22,10 @@ dependencies:
   permission_handler: ^10.2.0
   http: ^1.0.0
   google_generative_ai: ^0.4.5
+  android_intent_plus: ^2.0.0
+  torch_light: ^1.1.0
+  volume_controller: ^2.0.0
+  screen_brightness: ^2.0.0
 
 dev_dependencies:
   flutter_test:
