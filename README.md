@@ -2,7 +2,7 @@
 
 A Flutter-based terminal launcher application for Android that provides command-line functionality to manage installed apps and access device information.
 
-![screenshot](./assets/screenshot.png)
+<img src="./assets/screenshot.png" alt="screenshot" width="600" />
 
 ## Commands
 
